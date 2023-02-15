@@ -1,3 +1,9 @@
+# import sys
+# Change to False if not debugging lmao
+# Affects webdriver headless mode
+DEBUG = True
+# DEBUG = bool(hasattr(sys, 'gettrace') and sys.gettrace() is not None)
+
 import os
 import requests
 
@@ -7,7 +13,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.firefox.webdriver import WebDriver
 def initializeDriver() -> WebDriver:
     from selenium.common import exceptions
-    os.environ['MOZ_HEADLESS']='1'
+    if not DEBUG: os.environ['MOZ_HEADLESS']='1'
     try:
         driver = webdriver.Firefox()
     except exceptions.WebDriverException:
@@ -56,4 +62,4 @@ def listContests() -> list[tuple[str, int]]:
     return contests
 
 if __name__=="__main__":
-    pass
+    driver.quit()
