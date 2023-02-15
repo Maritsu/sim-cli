@@ -130,3 +130,11 @@ dmypy.json
 
 # Screenshots (saved for testing purposes)
 *.png
+
+# SIM data
+sim/
+sim-src/
+sip/
+sip-src/
+temp/
+website/bubr.pdf
