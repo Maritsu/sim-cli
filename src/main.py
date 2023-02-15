@@ -27,8 +27,8 @@ def initializeDriver() -> WebDriver:
         exit(2)
     return driver
 
-# TODO: change URL to sim.13lo.pl when done
-URL = "http://127.0.0.1:8081"
+URL = "https://sim.13lo.pl"
+# URL = "http://127.0.0.1:8081"
 driver = initializeDriver()
 
 def submit(problemID:int, submissionSourceFilePath:str) -> None:
