@@ -77,5 +77,10 @@ def listContests() -> list[tuple[str, int]]:
         contests.append((td.text, contestID))
     return contests
 
+def displayContests() -> None:
+    contestList = listContests()
+    for contest in contestList:
+        print(f"[ID: {contest[1]}] {contest[0]}")
+
 if __name__=="__main__":
     driver.quit()
