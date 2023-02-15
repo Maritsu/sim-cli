@@ -46,7 +46,27 @@ def submit(problemID:int, submissionSourceFilePath:str) -> None:
     fileBox.send_keys(submissionSourceFilePath)
     sendBtn = driver.find_element(By.XPATH, "//input[@type='submit']")
     sendBtn.click()
-    # TODO: add wait for response (possible error!)
+    print("Sending submission... ", end="")
+    try:
+        WebDriverWait(driver, 60).until(lambda d: d.find_element(By.XPATH, "//div[@class='spinner']"))
+    except TimeoutException:
+        print("Timed out (Not even the spinner loaded.. wow)")
+        return
+    try:
+        # Wait until error box appears or URL changes to submission
+        WebDriverWait(driver, 60).until(EC.any_of(lambda d: d.find_element(By.XPATH, "//span[@class='oldloader-info error']", EC.url_changes(f"{URL}/s/3621"))))
+    except TimeoutException:
+        print("Timed out")
+        return
+
+    url = driver.current_url
+    if "/s/" in url:
+        subID = int(url.split('/')[-1].split('#')[0])
+        print(f"Done!\nSubmission ID: {subID}")
+    else:
+        # Submission failed
+        errorSpan = driver.find_element(By.XPATH, "//span[@class='oldloader-info error']")
+        print(f"\n{errorSpan.text}")
 
 def getStatementURL(problemID:int) -> str:
     return f"{URL}/api/download/statement/contest/p{problemID}/"
