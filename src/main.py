@@ -56,8 +56,10 @@ def openStatement(problemID:int) -> None:
     call(["xdg-open", getStatementURL(problemID)])
 
 def downloadStatement(problemID:int) -> None:
-    with open(f"{problemID}.pdf", "wb") as f:
-        f.write(requests.get(getStatementURL(problemID)).content)
+    from pathlib import Path
+    response = requests.get(getStatementURL(problemID), stream=True)
+    with Path(f"{problemID}.pdf") as f:
+        f.write_bytes(response.content)
     print(f"Saved statement to {problemID}.pdf!")
 
 def listContests() -> list[tuple[str, int]]:
