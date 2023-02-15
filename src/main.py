@@ -8,7 +8,10 @@ import os
 import requests
 
 from selenium import webdriver
+from selenium.common.exceptions import TimeoutException
 from selenium.webdriver.common.by import By
+from selenium.webdriver.support.wait import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
 
 from selenium.webdriver.firefox.webdriver import WebDriver
 def initializeDriver() -> WebDriver:
@@ -33,7 +36,13 @@ def submit(problemID:int, submissionSourceFilePath:str) -> None:
         print(f"ERROR: The file {submissionSourceFilePath} does not exist.")
         return
     driver.get(f"{URL}/c/p{problemID}/submit")
-    fileBox = driver.find_element(By.NAME, "solution")
+    try:
+        # fileBox = driver.find_element(By.NAME, "solution")
+        fileBox = WebDriverWait(driver, 15).until(lambda d: d.find_element(By.NAME, "solution"))
+    except TimeoutException:
+        print("Submission page timed out")
+        return
+    # Now the page is sure to have been loaded
     fileBox.send_keys(submissionSourceFilePath)
     sendBtn = driver.find_element(By.XPATH, "//input[@type='submit']")
     sendBtn.click()
@@ -54,7 +63,12 @@ def downloadStatement(problemID:int) -> None:
 def listContests() -> list[tuple[str, int]]:
     contests = []
     driver.get(f"{URL}/c#all")
-    table = driver.find_elements(By.XPATH, "//table[@class='contests']/tbody//tr")
+    try:
+        # table = driver.find_elements(By.XPATH, "//table[@class='contests']/tbody//tr")
+        table = WebDriverWait(driver, 15).until(lambda d: d.find_elements(By.XPATH, "//table[@class='contests']/tbody//tr"))
+    except TimeoutException:
+        print("The contest list timed out")
+        return []
     for tr in table:
         td = tr.find_elements(By.TAG_NAME, "td")[0]
         contestID = td.find_element(By.TAG_NAME, "a").get_attribute("href").split("/")[-1][1:]
