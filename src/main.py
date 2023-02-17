@@ -107,13 +107,13 @@ def listContestRounds(contestID:int) -> list[tuple[str, int]]:
     driver.get(f"{URL}/c/c{contestID}#dashboard")
     try:
         # Either the list appears, or an error box appears.
-        # REMINDER: locators should be wrapped in (), e.g. (By.FOO, "bar") instead of By.FOO, "bar"
+        # NOTE: locators should be wrapped in (), e.g. (By.FOO, "bar") instead of By.FOO, "bar"
         roundsList = WebDriverWait(driver, 15).until(EC.any_of(EC.presence_of_element_located((By.XPATH, "//div[@class='rounds']")), EC.presence_of_element_located((By.XPATH, "//span[@class='oldloader-info error']"))))
     except TimeoutException:
         print("The contest dashboard timed out")
         return []
     if roundsList.tag_name == "span":
-        # TODO: Replace this print with an actual parser for the error message
+        # TODO: Replace the prints here, in listRoundProblems and listContestProblems with an actual parser for the error message
         print(f"{roundsList.text}")
         return []
 
@@ -135,7 +135,6 @@ def listRoundProblems(roundID:int) -> list[tuple[str, int]]:
         print("The contest dashboard timed out")
         return []
     if problemList.tag_name == "span":
-        # TODO: Replace this print with an actual parser for the error message
         print(f"{problemList.text}")
         return []
 
@@ -147,6 +146,38 @@ def listRoundProblems(roundID:int) -> list[tuple[str, int]]:
         problemSpan = problem.find_element(By.TAG_NAME, "span")
         problemID = int(problem.get_attribute("href").split("/")[-1][1:])
         problems.append((problemSpan.text, problemID))
+    return problems
+
+def listContestProblems(contestID:int) -> dict[tuple[str, int], list[tuple[str, int]]]:
+    # NOTE: This function does not utilize listContestRounds() and listRoundProblems() in order to reduce the amount of requests sent to SIM
+    problems = {}
+    driver.get(f"{URL}/c/c{contestID}#dashboard")
+    try:
+        # Either the list appears, or an error box appears.
+        roundsList = WebDriverWait(driver, 15).until(EC.any_of(EC.presence_of_element_located((By.XPATH, "//div[@class='rounds']")), EC.presence_of_element_located((By.XPATH, "//span[@class='oldloader-info error']"))))
+    except TimeoutException:
+        print("The contest dashboard timed out")
+        return {}
+    if roundsList.tag_name == "span":
+        print(f"{roundsList.text}")
+        return {}
+
+    # Rounds go from right to left (i.e. leftmost = newest)
+    for round in roundsList.find_elements(By.CLASS_NAME, "round")[::-1]:
+        gotTitle = False
+        title = ("", -1)
+        probs = []
+        for problem in round.find_elements(By.TAG_NAME, "a"):
+            if not gotTitle:
+                titleSpan = problem.find_element(By.TAG_NAME, "span")
+                titleID = int(problem.get_attribute("href").split("/")[-1][1:])
+                title = (titleSpan.text, titleID)
+                gotTitle = True
+            else:
+                probSpan = problem.find_element(By.TAG_NAME, "span")
+                probID = int(problem.get_attribute("href").split("/")[-1][1:])
+                probs.append((probSpan.text, probID))
+        problems[title] = probs
     return problems
 
 if __name__=="__main__":
