@@ -102,5 +102,27 @@ def displayContests() -> None:
     for contest in contestList:
         print(f"[ID: {contest[1]}] {contest[0]}")
 
+def listContestRounds(contestID:int) -> list[tuple[str, int]]:
+    rounds = []
+    driver.get(f"{URL}/c/c{contestID}#dashboard")
+    try:
+        # Either the list appears, or an error box appears.
+        # REMINDER: locators should be wrapped in (), e.g. (By.FOO, "bar") instead of By.FOO, "bar"
+        roundsList = WebDriverWait(driver, 15).until(EC.any_of(EC.presence_of_element_located((By.XPATH, "//div[@class='rounds']")), EC.presence_of_element_located((By.XPATH, "//span[@class='oldloader-info error']"))))
+    except TimeoutException:
+        print("The contest dashboard timed out")
+        return []
+    if roundsList.tag_name == "span":
+        # TODO: Replace this print with an actual parser for the error message
+        print(f"{roundsList.text}")
+        return []
+
+    for round in roundsList.find_elements(By.CLASS_NAME, "round"):
+        a = round.find_element(By.TAG_NAME, "a")
+        roundSpan = a.find_element(By.TAG_NAME, "span")
+        roundID = int(a.get_attribute("href").split("/")[-1][1:])
+        rounds.append((roundSpan.text, roundID))
+    return rounds
+
 if __name__=="__main__":
     driver.quit()
