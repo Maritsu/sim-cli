@@ -122,7 +122,8 @@ def listContestRounds(contestID:int) -> list[tuple[str, int]]:
         roundSpan = a.find_element(By.TAG_NAME, "span")
         roundID = int(a.get_attribute("href").split("/")[-1][1:])
         rounds.append((roundSpan.text, roundID))
-    return rounds
+    # Rounds go from right to left (i.e. leftmost = newest)
+    return rounds[::-1]
 
 def listRoundProblems(roundID:int) -> list[tuple[str, int]]:
     problems = []
