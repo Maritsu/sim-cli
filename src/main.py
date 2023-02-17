@@ -124,5 +124,29 @@ def listContestRounds(contestID:int) -> list[tuple[str, int]]:
         rounds.append((roundSpan.text, roundID))
     return rounds
 
+def listRoundProblems(roundID:int) -> list[tuple[str, int]]:
+    problems = []
+    driver.get(f"{URL}/c/r{roundID}#dashboard")
+    try:
+        # Same situation as in listContestRounds()
+        problemList = WebDriverWait(driver, 15).until(EC.any_of(EC.presence_of_element_located((By.XPATH, "//div[@class='round']")), EC.presence_of_element_located((By.XPATH, "//span[@class='oldloader-info error']"))))
+    except TimeoutException:
+        print("The contest dashboard timed out")
+        return []
+    if problemList.tag_name == "span":
+        # TODO: Replace this print with an actual parser for the error message
+        print(f"{problemList.text}")
+        return []
+
+    skippedTitle = False
+    for problem in problemList.find_elements(By.TAG_NAME, "a"):
+        if not skippedTitle:
+            skippedTitle = True
+            continue
+        problemSpan = problem.find_element(By.TAG_NAME, "span")
+        problemID = int(problem.get_attribute("href").split("/")[-1][1:])
+        problems.append((problemSpan.text, problemID))
+    return problems
+
 if __name__=="__main__":
     driver.quit()
