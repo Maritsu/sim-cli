@@ -27,9 +27,64 @@ def initializeDriver() -> WebDriver:
         exit(2)
     return driver
 
+import pathlib
+COOKIEPATH = pathlib.Path(pathlib.Path.home() / ".cache" / "sim-cli" / "cookies.pkl")
+if not os.path.exists(os.path.dirname(COOKIEPATH)): os.mkdir(os.path.dirname(COOKIEPATH))
 URL = "https://sim.13lo.pl"
 # URL = "http://127.0.0.1:8081"
 driver = initializeDriver()
+
+import pickle
+def loadCookies() -> None:
+    # Cookies? UwU
+    dcn = [c['name'] for c in driver.get_cookies()]
+    if "csrf_token" in dcn and "session" in dcn:
+        # The cookies have already been loaded
+        return
+    driver.get(f"{URL}/sign_in")
+    for cookie in pickle.load(open(COOKIEPATH, "rb")):
+        driver.add_cookie(cookie)
+    return
+
+def dumpCookies() -> None:
+    cookies = driver.get_cookies()
+    pickle.dump(cookies, open(COOKIEPATH, "wb"))
+
+from typing import Callable
+# Decorator for functions which require the user to be logged in
+def reqLog(func:Callable):
+    def inner(*args, **kwargs):
+        loadCookies()
+        return func(*args, **kwargs)
+    return inner
+
+def login(username:str, password:str) -> bool:
+    print("Warning: due to how SIM works, login information will only be preserved for 1 month.")
+    driver.get(f"{URL}/sign_in")
+    try:
+        # WARNING: this declines the possibility of an error box appearing because i can't be fucking bothered to implement a check; open an issue if you're affected
+        loginForm = WebDriverWait(driver, 15).until(EC.presence_of_element_located((By.TAG_NAME, "form")))
+    except TimeoutException:
+        print("Login page timed out")
+        return False
+    un, pw, cb = [x.find_element(By.TAG_NAME, "input") for x in loginForm.find_elements(By.XPATH, "//div[@class='field-group']")]
+    un.send_keys(username)
+    pw.send_keys(password)
+    if loginForm.find_element(By.XPATH, "//input[@type='hidden' and @name='remember_for_a_month']").get_attribute("value") != "true":
+        cb.click()
+    loginForm.find_element(By.XPATH, "//input[@class='btn blue' and @type='submit']").click()
+    try:
+        braindead = WebDriverWait(driver, 60).until(EC.any_of(EC.presence_of_element_located((By.XPATH, "//span[@class='request-status success']")), EC.presence_of_element_located((By.XPATH, "//span[@class='request-status error]"))))
+    except TimeoutException:
+        print("Timed out")
+        return False
+    if "error" in braindead.get_attribute("class"):
+        print(f"{braindead.text}")
+        return False
+    print("Signed in successfully!")
+    # Dump cookies so that the month-long login save is actually preserved
+    dumpCookies()
+    return True
 
 def submit(problemID:int, submissionSourceFilePath:str) -> None:
     if not os.path.exists(submissionSourceFilePath):
