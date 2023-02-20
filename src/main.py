@@ -240,5 +240,84 @@ def listContestProblems(contestID:int) -> dict[tuple[str, int], list[tuple[str, 
         problems[title] = probs
     return problems
 
+@reqLog
+def displaySubmission(subID:int) -> None:
+    driver.get(f"{URL}/s/{subID}#reports")
+    try:
+        info = WebDriverWait(driver, 15).until(EC.any_of(EC.presence_of_element_located((By.XPATH, "//div[@class='submission-info']")), EC.presence_of_element_located((By.XPATH, "//span[@class='oldloader-info error']"))))
+    except TimeoutException:
+        print("Timed out")
+        return
+    if info.tag_name == "span":
+        print(f"{info.text}")
+        return
+
+    header = info.find_element(By.TAG_NAME, "tbody").find_element(By.TAG_NAME, "tr")
+    lang, _, problem, time, status, score, stype = header.find_elements(By.TAG_NAME, "td")
+    problem = problem.find_element(By.TAG_NAME, "a")
+    tz = time.find_element(By.TAG_NAME, "sup").text
+    time = time.text.split("<")[0].split("UTC")[0]
+    print(f"Submission {subID}\nLang: {lang.text}\nProblem: {problem.text} (ID {problem.get_attribute('href').split('/')[-1]})\nSubmission time: {time} ({tz})\nStatus: {status.text}\nScore: {score.text}\nType: {stype.text}")
+
+@reqLog
+def displaySubmissionDetails(subID:int) -> None:
+    displaySubmission(subID)
+    # Since we already have displayed the summary, the website must've been loaded
+    try:
+        initr, detr = driver.find_elements(By.XPATH, "//div[@class='results']/table")
+    except ValueError:
+        # The initial tests did not show up, set initr to None
+        initr = None
+        detr = driver.find_element(By.XPATH, "//div[@class='results']/table")
+    # TODO: add test comments while displaying
+    # though these only appear if a non-OK status appears, and they are exactly the same by XPATH
+
+    def ds(x:str)->str: return x.replace(" ", "")
+    if initr is not None:
+        print("=== Initial tests ===")
+        it = 0
+        sc = ""
+        for test in initr.find_element(By.TAG_NAME, "tbody").find_elements(By.TAG_NAME, "tr"):
+            tds = test.find_elements(By.TAG_NAME, "td")
+            if len(tds) == 5:
+                name, status, time, mem, score = tds
+            else:
+                name, status, time, mem = tds
+                score = None
+            if score is not None and score.get_attribute("class") == "groupscore":
+                it = int(score.get_attribute("rowspan"))
+                sc = score.text
+            sc_parsed = ""
+            if it == 1:
+                sc_parsed = f"Group score: {ds(sc)}"
+            elif it == 0 and score is not None:
+                sc_parsed = f"Score: {ds(score.text)}"
+            elif it > 1:
+                sc_parsed = ""
+            print(f"{name.text} // Status: {status.text} // Time: {ds(time.text)} sec // Memory: {ds(mem.text)} KiB // {sc_parsed}")
+            if it > 0: it -= 1
+    print("=== Full judgement protocol ===")
+    it = 0
+    sc = ""
+    for test in detr.find_element(By.TAG_NAME, "tbody").find_elements(By.TAG_NAME, "tr"):
+        tds = test.find_elements(By.TAG_NAME, "td")
+        if len(tds) == 5:
+            name, status, time, mem, score = tds
+        else:
+            name, status, time, mem = tds
+            score = None
+        if score is not None and score.get_attribute("class") == "groupscore":
+            it = int(score.get_attribute("rowspan"))
+            sc = score.text
+        sc_parsed = ""
+        if it == 1:
+            sc_parsed = f"Group score: {ds(sc)}"
+        elif it == 0 and score is not None:
+            sc_parsed = f"Score: {ds(score.text)}"
+        elif it > 1:
+            sc_parsed = ""
+        print(f"{name.text} // Status: {status.text} // Time: {ds(time.text)} sec // Memory: {ds(mem.text)} KiB // {sc_parsed}")
+        if it > 0: it -= 1
+
 if __name__=="__main__":
     driver.quit()
