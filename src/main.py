@@ -86,6 +86,7 @@ def login(username:str, password:str) -> bool:
     dumpCookies()
     return True
 
+@reqLog
 def submit(problemID:int, submissionSourceFilePath:str) -> None:
     if not os.path.exists(submissionSourceFilePath):
         print(f"ERROR: The file {submissionSourceFilePath} does not exist.")
@@ -137,7 +138,8 @@ def downloadStatement(problemID:int) -> None:
         f.write_bytes(response.content)
     print(f"Saved statement to {problemID}.pdf!")
 
-def listContests() -> list[tuple[str, int]]:
+@reqLog
+def listContests() -> list[tuple[str, int, bool]]:
     contests = []
     driver.get(f"{URL}/c#all")
     try:
@@ -149,14 +151,15 @@ def listContests() -> list[tuple[str, int]]:
     for tr in table:
         td = tr.find_elements(By.TAG_NAME, "td")[0]
         contestID = td.find_element(By.TAG_NAME, "a").get_attribute("href").split("/")[-1][1:]
-        contests.append((td.text, contestID))
+        contests.append((td.text, contestID, (tr.get_attribute("class") == "grayed")))
     return contests
 
 def displayContests() -> None:
     contestList = listContests()
     for contest in contestList:
-        print(f"[ID: {contest[1]}] {contest[0]}")
+        print(f"{'[Private] ' if contest[2] else '' }[ID: {contest[1]}] {contest[0]}")
 
+@reqLog
 def listContestRounds(contestID:int) -> list[tuple[str, int]]:
     rounds = []
     driver.get(f"{URL}/c/c{contestID}#dashboard")
@@ -180,6 +183,7 @@ def listContestRounds(contestID:int) -> list[tuple[str, int]]:
     # Rounds go from right to left (i.e. leftmost = newest)
     return rounds[::-1]
 
+@reqLog
 def listRoundProblems(roundID:int) -> list[tuple[str, int]]:
     problems = []
     driver.get(f"{URL}/c/r{roundID}#dashboard")
@@ -203,6 +207,7 @@ def listRoundProblems(roundID:int) -> list[tuple[str, int]]:
         problems.append((problemSpan.text, problemID))
     return problems
 
+@reqLog
 def listContestProblems(contestID:int) -> dict[tuple[str, int], list[tuple[str, int]]]:
     # NOTE: This function does not utilize listContestRounds() and listRoundProblems() in order to reduce the amount of requests sent to SIM
     problems = {}
